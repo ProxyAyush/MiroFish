@@ -1,0 +1,53 @@
+name: MiroFish Deep Research
+
+on:
+  push:
+    paths:
+      - 'README.md'
+  workflow_dispatch:
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-level: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openai duckduckgo-search python-dotenv
+
+      - name: Run Deep Research
+        env:
+          GROQ: ${{ secrets.GROQ }}
+          ZEP_API_KEY: "mock_key"
+        run: |
+          python scripts/research_agent.py
+
+      - name: Commit and Push Results
+        if: always()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          # Stage results and progress
+          git add results/
+          
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Add/Update research results: $(date +'%Y-%m-%d %H:%M:%S')"
+            git pull --rebase
+            git push
+          fi
